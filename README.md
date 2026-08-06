@@ -1,63 +1,8 @@
-# godot-mcp
-
-Minimal MCP bridge for the [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro) editor addon.
-
-6 tools instead of 175 — no catalogue to maintain. Connects AI assistants (Claude Code, Cursor, etc.) directly to your Godot editor.
-
-```
-AI Assistant <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Godot Editor Plugin
-```
-
-## Setup
-
-1. Install the [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro) addon in your Godot project and enable it
-2. Build and run this server:
-
-```bash
-npm install && npm run build && npm start
-```
-
-3. Add to your MCP client config (`.mcp.json`, `claude.json`, `opencode.json`):
-
-```json
-{
-  "mcpServers": {
-    "godot-mcp": {
-      "command": "node",
-      "args": ["/path/to/godot-mcp/dist/index.js"]
-    }
-  }
-}
-```
-
-The server listens on ports **6505–6514** (configurable via `GODOT_MCP_PORT`). The Godot addon connects automatically.
-
-## Tools
-
-| Tool | Description |
-|------|-------------|
-| `godot_call` | Call any of the 175+ addon methods |
-| `godot_list_methods` | List available methods by category |
-| `godot_info` | Project info (shorthand) |
-| `godot_screenshot` | Capture editor viewport as PNG image |
-| `godot_execute` | Run GDScript in the editor |
-| `godot_status` | Check connection to Godot |
-
-`godot_call` is the only tool you need — the rest are convenience shortcuts. See `godot_list_methods` for the full catalog.
-
-## How it works
-
-The Godot MCP Pro addon connects to this server via WebSocket (JSON-RPC 2.0). The server translates MCP tool calls into JSON-RPC requests and forwards them to Godot. Responses come back through the same channel.
-
-The server uses raw WebSocket framing (Node.js built-in `http` + `crypto`), no library dependency. Compatible with Godot 4.x GDScript WebSocketPeer.
-
-## License
-
-MIT
+[🇫🇷 Français](#fr) · [🇬🇧 English](#en)
 
 ---
 
-# godot-mcp (Français)
+# <a id="fr"></a>godot-mcp
 
 Pont MCP minimal pour l'addon éditeur [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro).
 
@@ -111,5 +56,64 @@ L'addon Godot MCP Pro se connecte à ce serveur via WebSocket (JSON-RPC 2.0). Le
 Le serveur utilise le framing WebSocket natif (modules `http` + `crypto` de Node.js), sans bibliothèque externe. Compatible Godot 4.x.
 
 ## Licence
+
+MIT
+
+---
+
+# <a id="en"></a>godot-mcp
+
+Minimal MCP bridge for the [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro) editor addon.
+
+6 tools instead of 175 — no catalogue to maintain. Connects AI assistants (Claude Code, Cursor, etc.) directly to your Godot editor.
+
+```
+AI Assistant <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Godot Editor Plugin
+```
+
+## Setup
+
+1. Install the [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro) addon in your Godot project and enable it
+2. Build and run this server:
+
+```bash
+npm install && npm run build && npm start
+```
+
+3. Add to your MCP client config (`.mcp.json`, `claude.json`, `opencode.json`):
+
+```json
+{
+  "mcpServers": {
+    "godot-mcp": {
+      "command": "node",
+      "args": ["/path/to/godot-mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+The server listens on ports **6505–6514** (configurable via `GODOT_MCP_PORT`). The Godot addon connects automatically.
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `godot_call` | Call any of the 175+ addon methods |
+| `godot_list_methods` | List available methods by category |
+| `godot_info` | Project info (shorthand) |
+| `godot_screenshot` | Capture editor viewport as PNG image |
+| `godot_execute` | Run GDScript in the editor |
+| `godot_status` | Check connection to Godot |
+
+`godot_call` is the only tool you need — the rest are convenience shortcuts. See `godot_list_methods` for the full catalog.
+
+## How it works
+
+The Godot MCP Pro addon connects to this server via WebSocket (JSON-RPC 2.0). The server translates MCP tool calls into JSON-RPC requests and forwards them to Godot. Responses come back through the same channel.
+
+The server uses raw WebSocket framing (Node.js built-in `http` + `crypto`), no library dependency. Compatible with Godot 4.x GDScript WebSocketPeer.
+
+## License
 
 MIT
