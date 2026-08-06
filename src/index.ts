@@ -90,17 +90,17 @@ class GodotBridge {
     return this.peers.size > 0;
   }
 
-  async call(method: string, params?: Record<string, unknown>): Promise<unknown> {
+  async call(code: string): Promise<unknown> {
     if (!this.connected) throw new Error("Godot editor not connected — is the plugin enabled and Godot running?");
     const peer = this.peers.values().next().value as Duplex;
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error(`Request "${method}" timed out after ${REQUEST_TIMEOUT / 1000}s`));
+        reject(new Error(`Request timed out after ${REQUEST_TIMEOUT / 1000}s`));
       }, REQUEST_TIMEOUT);
       this.pending.set(id, { resolve, reject, timer });
-      wsSend(peer, JSON.stringify({ jsonrpc: "2.0", id, method, params: params ?? {} }));
+      wsSend(peer, JSON.stringify({ jsonrpc: "2.0", id, method: "run_gdscript", params: { code } }));
     });
   }
 
@@ -156,60 +156,31 @@ const server = new Server(
 
 const TOOL_DEFS = [
   {
-    name: "godot_call",
-    description: "Call any method on the Godot editor addon. See godot_list_methods for available methods and their parameters.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        method: { type: "string", description: "Method name, e.g. get_project_info, get_scene_tree, add_node" },
-        params: { type: "object", description: "Parameters for the method (varies per method)" },
-      },
-      required: ["method"],
-    },
-  },
-  {
-    name: "godot_list_methods",
-    description: "List all available Godot addon method categories with example methods for each.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        category: { type: "string", description: "Optional: filter by category name (project, scene, node, script, editor, input, runtime, animation, tilemap, theme, 3d, physics, particles, navigation, audio, shader, resource, export, profiling, batch, analysis, animation_tree, test, android, headless)" },
-      },
-    },
-  },
-  {
-    name: "godot_info",
-    description: "Get project info from the Godot editor (shorthand for godot_call method=get_project_info).",
-    inputSchema: { type: "object", properties: {} },
-  },
-  {
-    name: "godot_screenshot",
-    description: "Capture the Godot editor viewport. Returns base64 PNG image data.",
-    inputSchema: { type: "object", properties: {} },
-  },
-  {
     name: "godot_execute",
-    description: "Execute GDScript code in the Godot editor (shorthand for godot_call method=execute_editor_script).",
+    description: "Execute GDScript code in the Godot editor. The code runs as a function body and its return value is sent back. Access EditorInterface, get_node, etc. directly.",
     inputSchema: {
       type: "object",
       properties: {
-        code: { type: "string", description: "GDScript code to execute" },
+        code: { type: "string", description: "GDScript expression or block. Must return a value. Example: Engine.get_version_info()" },
       },
       required: ["code"],
     },
   },
   {
-    name: "godot_status",
-    description: "Check connection status to the Godot editor.",
+    name: "godot_info",
+    description: "Get project info from the Godot editor (name, version, settings).",
     inputSchema: { type: "object", properties: {} },
   },
-];
-
-const CATEGORIES = [
-  "project", "scene", "node", "script", "editor", "input", "runtime",
-  "animation", "tilemap", "theme", "3d", "physics", "particles",
-  "navigation", "audio", "shader", "resource", "export", "profiling",
-  "batch", "analysis", "animation_tree", "test", "android", "headless",
+  {
+    name: "godot_screenshot",
+    description: "Capture the Godot editor viewport as a PNG image.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "godot_status",
+    description: "Check if Godot editor is connected to this server.",
+    inputSchema: { type: "object", properties: {} },
+  },
 ];
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOL_DEFS }));
@@ -218,25 +189,19 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const { name, arguments: args } = req.params;
   try {
     switch (name) {
-      case "godot_call": {
-        const method = args?.method as string;
-        if (!method) throw new Error("method is required");
-        const params = (args?.params ?? {}) as Record<string, unknown>;
-        const result = await godot.call(method, params);
+      case "godot_execute": {
+        const code = args?.code as string;
+        if (!code) throw new Error("code is required");
+        const result = await godot.call(code);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
-      case "godot_list_methods": {
-        const filter = args?.category as string | undefined;
-        const list = filter ? CATEGORIES.filter(c => c === filter) : CATEGORIES;
-        const text = list.length ? `Categories: ${list.join(", ")}\nUse godot_call with any method from the plugin source (addons/godot_mcp/commands/).` : "Category not found.";
-        return { content: [{ type: "text", text }] };
-      }
       case "godot_info": {
-        const result = await godot.call("get_project_info");
+        const result = await godot.call('return{name:ProjectSettings.get_setting("application/config/name",""),version:Engine.get_version_info()}');
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       case "godot_screenshot": {
-        const result = await godot.call("get_editor_screenshot") as Record<string, unknown>;
+        const gdscript = 'var v=EditorInterface.get_editor_viewport_3d(0);if v==null:v=EditorInterface.get_editor_main_screen();var img=v.get_texture().get_image();var buf=img.save_png_to_buffer();return{image_base64:Marshalls.raw_to_base64(buf),width:img.get_width(),height:img.get_height(),format:"png"}';
+        const result = await godot.call(gdscript) as Record<string, unknown>;
         const base64 = result?.image_base64 as string;
         if (base64) {
           return { content: [
@@ -244,12 +209,6 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
             { type: "image", data: base64, mimeType: "image/png" },
           ]};
         }
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-      }
-      case "godot_execute": {
-        const code = args?.code as string;
-        if (!code) throw new Error("code is required");
-        const result = await godot.call("execute_editor_script", { code });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       case "godot_status": {

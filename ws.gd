@@ -86,7 +86,7 @@ func _on_msg(text: String, port: int) -> void:
 
 func _run(code: String) -> Dictionary:
 	var s := GDScript.new()
-	s.source_code = "extends RefCounted\nfunc _run():\n\treturn " + code.replace("\n", "\n\t")
+	s.source_code = "extends RefCounted\nfunc _run():\n\t" + code.replace("\n", "\n\t")
 	var err := s.reload()
 	if err != OK: return {"error":{"code":-32603,"message":"Compile: "+error_string(err)}}
 	var obj = s.new()
