@@ -11,11 +11,7 @@ import { Duplex } from "node:stream";
 
 const WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const BASE_PORT = parseInt(process.env.GODOT_MCP_PORT ?? "6505", 10);
-const PORTS = {
-  MCP: Array.from({ length: 5 }, (_, i) => BASE_PORT + i),
-  CLI: Array.from({ length: 5 }, (_, i) => BASE_PORT + 5 + i),
-};
-const ALL_PORTS = [...PORTS.MCP, ...PORTS.CLI];
+const ALL_PORTS = Array.from({ length: 10 }, (_, i) => BASE_PORT + i);
 const REQUEST_TIMEOUT = 30_000;
 
 function wsAccept(key: string): string {
@@ -24,15 +20,9 @@ function wsAccept(key: string): string {
 
 function wsSend(socket: Duplex, text: string): void {
   const buf = Buffer.from(text, "utf8");
-  if (buf.length < 126) {
-    const h = Buffer.alloc(2);
-    h[0] = 0x81; h[1] = buf.length;
-    socket.write(Buffer.concat([h, buf]));
-  } else {
-    const h = Buffer.alloc(4);
-    h[0] = 0x81; h[1] = 126; h.writeUInt16BE(buf.length, 2);
-    socket.write(Buffer.concat([h, buf]));
-  }
+  const h = Buffer.alloc(4);
+  h[0] = 0x81; h[1] = 126; h.writeUInt16BE(buf.length, 2);
+  socket.write(Buffer.concat([h, buf]));
 }
 
 interface Pending {
@@ -58,7 +48,7 @@ function decodeFrame(buf: Buffer): { opcode: number; payload: Buffer; total: num
 }
 
 class GodotBridge {
-  private servers = new Map<number, http.Server>();
+  private servers = new Set<http.Server>();
   private peers = new Map<number, Duplex>();
   private bufs = new Map<Duplex, Buffer>();
   private pending = new Map<number, Pending>();
@@ -83,14 +73,14 @@ class GodotBridge {
         socket.on("error", () => { this.peers.delete(port); this.bufs.delete(socket); });
       });
       srv.listen(port, "127.0.0.1");
-      this.servers.set(port, srv);
+      this.servers.add(srv);
     }
   }
 
   stop(): void {
     for (const [, p] of this.pending) { clearTimeout(p.timer); p.reject(new Error("Server shutting down")); }
     this.pending.clear();
-    for (const srv of this.servers.values()) srv.close();
+    for (const srv of this.servers) srv.close();
     for (const sock of this.peers.values()) sock.destroy();
     this.peers.clear();
     this.bufs.clear();
@@ -215,33 +205,12 @@ const TOOL_DEFS = [
   },
 ];
 
-const METHOD_CATALOG: Record<string, string[]> = {
-  project: ["get_project_info", "get_filesystem_tree", "search_files", "search_in_files", "get_project_settings", "set_project_setting", "uid_to_project_path", "project_path_to_uid", "add_autoload", "remove_autoload"],
-  scene: ["get_scene_tree", "get_scene_file_content", "create_scene", "open_scene", "delete_scene", "add_scene_instance", "play_scene", "stop_scene", "save_scene"],
-  node: ["add_node", "delete_node", "duplicate_node", "move_node", "update_property", "get_node_properties", "add_resource", "set_anchor_preset", "rename_node", "connect_signal", "disconnect_signal", "get_node_groups", "set_node_groups", "find_nodes_in_group", "get_editor_selection", "select_nodes", "clear_editor_selection"],
-  script: ["list_scripts", "read_script", "create_script", "edit_script", "attach_script", "get_open_scripts", "validate_script"],
-  editor: ["get_editor_errors", "get_output_log", "get_editor_screenshot", "get_game_screenshot", "execute_editor_script", "clear_output", "reload_plugin", "reload_project", "get_signals", "compare_screenshots"],
-  input: ["simulate_key", "simulate_mouse_click", "simulate_mouse_move", "simulate_action", "simulate_sequence"],
-  runtime: ["get_game_scene_tree", "get_game_node_properties", "set_game_node_property", "capture_frames", "monitor_properties", "execute_game_script", "start_recording", "stop_recording", "replay_recording", "find_nodes_by_script", "get_autoload", "batch_get_properties", "find_ui_elements", "click_button_by_text", "wait_for_node", "find_nearby_nodes", "navigate_to", "move_to"],
-  animation: ["list_animations", "create_animation", "add_animation_track", "set_animation_keyframe", "get_animation_info", "remove_animation"],
-  tilemap: ["tilemap_set_cell", "tilemap_fill_rect", "tilemap_get_cell", "tilemap_clear", "tilemap_get_info", "tilemap_get_used_cells"],
-  theme: ["create_theme", "set_theme_color", "set_theme_constant", "set_theme_font_size", "set_theme_stylebox", "get_theme_info"],
-  "3d": ["add_mesh_instance", "setup_camera_3d", "setup_lighting", "setup_environment", "add_gridmap", "set_material_3d"],
-  physics: ["setup_collision", "set_physics_layers", "get_physics_layers", "add_raycast", "setup_physics_body", "get_collision_info"],
-  particles: ["create_particles", "set_particle_material", "set_particle_color_gradient", "apply_particle_preset", "get_particle_info"],
-  navigation: ["setup_navigation_region", "setup_navigation_agent", "bake_navigation_mesh", "set_navigation_layers", "get_navigation_info"],
-  audio: ["add_audio_player", "add_audio_bus", "add_audio_bus_effect", "set_audio_bus", "get_audio_bus_layout", "get_audio_info"],
-  shader: ["create_shader", "read_shader", "edit_shader", "assign_shader_material", "set_shader_param", "get_shader_params"],
-  resource: ["read_resource", "edit_resource", "create_resource", "get_resource_preview"],
-  export: ["list_export_presets", "export_project", "get_export_info"],
-  profiling: ["get_performance_monitors", "get_editor_performance"],
-  batch: ["find_nodes_by_type", "find_signal_connections", "batch_set_property", "batch_add_nodes", "find_node_references", "get_scene_dependencies", "cross_scene_set_property"],
-  analysis: ["find_unused_resources", "analyze_signal_flow", "analyze_scene_complexity", "find_script_references", "detect_circular_dependencies", "get_project_statistics"],
-  animation_tree: ["create_animation_tree", "get_animation_tree_structure", "set_tree_parameter", "add_state_machine_state", "remove_state_machine_state", "add_state_machine_transition", "remove_state_machine_transition", "set_blend_tree_node"],
-  test: ["run_test_scenario", "assert_node_state", "assert_screen_text", "run_stress_test", "get_test_report"],
-  android: ["list_android_devices", "get_android_preset_info", "deploy_to_android"],
-  headless: ["run_headless_scene", "run_headless_script", "get_godot_executable"],
-};
+const CATEGORIES = [
+  "project", "scene", "node", "script", "editor", "input", "runtime",
+  "animation", "tilemap", "theme", "3d", "physics", "particles",
+  "navigation", "audio", "shader", "resource", "export", "profiling",
+  "batch", "analysis", "animation_tree", "test", "android", "headless",
+];
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOL_DEFS }));
 
@@ -258,10 +227,8 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       }
       case "godot_list_methods": {
         const filter = args?.category as string | undefined;
-        const entries = Object.entries(METHOD_CATALOG)
-          .filter(([k]) => !filter || k === filter)
-          .map(([cat, methods]) => `[${cat}] ${methods.slice(0, 6).join(", ")}${methods.length > 6 ? ` +${methods.length - 6} more` : ""}`);
-        const text = filter ? entries.join("\n") : `${entries.length} categories. Use godot_call with one of these methods.\n\n${entries.join("\n")}`;
+        const list = filter ? CATEGORIES.filter(c => c === filter) : CATEGORIES;
+        const text = list.length ? `Categories: ${list.join(", ")}\nUse godot_call with any method from the plugin source (addons/godot_mcp/commands/).` : "Category not found.";
         return { content: [{ type: "text", text }] };
       }
       case "godot_info": {
