@@ -4,7 +4,7 @@
 
 # <a id="fr"></a>godot-mcp
 
-Pont MCP entre un assistant IA et l'éditeur Godot. Exécutez du GDScript, capturez l'écran, inspectez le projet — le tout depuis votre agent IA.
+Pont MCP entre un assistant IA et l'éditeur Godot. 6 outils pour contrôler l'éditeur : scène, nœuds, scripts, capture d'écran, exécution GDScript, et 175+ méthodes via `godot_call`.
 
 ```
 Assistant IA <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Plugin Godot
@@ -14,13 +14,7 @@ Assistant IA <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Plugin Godot
 
 ### Plugin Godot
 
-Copiez ces 3 fichiers dans `addons/godot_mcp/` de votre projet Godot :
-
-- `plugin.cfg`
-- `plugin.gd`
-- `ws.gd`
-
-Activez le plugin : **Projet → Paramètres → Plugins → godot-mcp → Activer**
+Copiez le dossier `addons/godot_mcp/` dans `addons/` de votre projet Godot, puis activez-le : **Projet → Paramètres → Plugins → godot-mcp → Activer**
 
 ### Serveur
 
@@ -47,19 +41,12 @@ Le serveur écoute sur les ports **6505–6514** (`GODOT_MCP_PORT` pour changer)
 
 | Outil | Description |
 |-------|-------------|
-| `godot_execute(code)` | Exécute du GDScript dans l'éditeur. Le `return` est explicite. |
-| `godot_info` | Infos du projet (nom, version) |
+| `godot_call(method, params)` | Appelle n'importe quelle méthode du plugin (175+) |
+| `godot_list_methods(category?)` | Liste les méthodes par catégorie |
+| `godot_info` | Infos projet |
 | `godot_screenshot` | Capture la vue éditeur en PNG |
-| `godot_status` | Vérifie la connexion à Godot |
-
-### Exemples godot_execute
-
-```
-Engine.get_version_info()
-EditorInterface.get_open_scenes()
-get_node("/root").get_children().map(func(n): return n.name)
-var s = EditorInterface.get_selection().get_selected_nodes(); s.map(func(n): return n.name)
-```
+| `godot_execute(code)` | Exécute du GDScript |
+| `godot_status` | Vérifie la connexion |
 
 ## Licence
 
@@ -69,7 +56,7 @@ MIT
 
 # <a id="en"></a>godot-mcp
 
-MCP bridge between an AI assistant and the Godot editor. Run GDScript, take screenshots, inspect your project — all from your AI agent.
+MCP bridge between an AI assistant and the Godot editor. 6 tools to control the editor: scene, nodes, scripts, screenshots, GDScript execution, and 175+ methods via `godot_call`.
 
 ```
 AI Assistant <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Godot Plugin
@@ -79,13 +66,7 @@ AI Assistant <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Godot Plugin
 
 ### Godot Plugin
 
-Copy these 3 files into your project's `addons/godot_mcp/`:
-
-- `plugin.cfg`
-- `plugin.gd`
-- `ws.gd`
-
-Enable it: **Project → Project Settings → Plugins → godot-mcp → Enable**
+Copy `addons/godot_mcp/` into your Godot project's `addons/` folder, then enable it: **Project → Project Settings → Plugins → godot-mcp → Enable**
 
 ### Server
 
@@ -112,19 +93,12 @@ Listens on ports **6505–6514** (`GODOT_MCP_PORT` to change). Auto-connects to 
 
 | Tool | Description |
 |------|-------------|
-| `godot_execute(code)` | Run GDScript in the editor. Use explicit `return`. |
-| `godot_info` | Project info (name, version) |
+| `godot_call(method, params)` | Call any of the 175+ plugin methods |
+| `godot_list_methods(category?)` | List methods by category |
+| `godot_info` | Project info |
 | `godot_screenshot` | Capture editor viewport as PNG |
-| `godot_status` | Check Godot connection |
-
-### godot_execute examples
-
-```
-Engine.get_version_info()
-EditorInterface.get_open_scenes()
-get_node("/root").get_children().map(func(n): return n.name)
-var s = EditorInterface.get_selection().get_selected_nodes(); s.map(func(n): return n.name)
-```
+| `godot_execute(code)` | Run GDScript |
+| `godot_status` | Check connection |
 
 ## License
 
