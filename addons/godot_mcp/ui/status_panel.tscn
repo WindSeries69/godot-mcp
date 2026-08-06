@@ -1,8 +1,0 @@
-[gd_scene load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://addons/godot_mcp/ui/status_panel.gd" id="1"]
-
-[node name="MCPStatusPanel" type="VBoxContainer"]
-offset_right = 600.0
-offset_bottom = 300.0
-script = ExtResource("1")
