@@ -1,0 +1,432 @@
+@tool
+extends "res://plugin/commands/base_command.gd"
+
+
+func get_commands() -> Dictionary:
+	return {
+		"create_theme": _create_theme,
+		"set_theme_color": _set_theme_color,
+		"set_theme_constant": _set_theme_constant,
+		"set_theme_font_size": _set_theme_font_size,
+		"set_theme_stylebox": _set_theme_stylebox,
+		"setup_control": _setup_control,
+		"get_theme_info": _get_theme_info,
+	}
+
+
+func _create_theme(params: Dictionary) -> Dictionary:
+	var result := require_string(params, "path")
+	if result[1] != null:
+		return result[1]
+	var path: String = result[0]
+
+	var theme := Theme.new()
+
+	# Optionally set default font size
+	var font_size: int = optional_int(params, "default_font_size", 0)
+	if font_size > 0:
+		theme.default_font_size = font_size
+
+	var ext_guard := guard_expected_extension(path, ["tres", "res", "theme"], "a theme resource")
+	if not ext_guard.is_empty():
+		return ext_guard
+
+	var scene_guard := guard_offline_scene_save(path)
+	if not scene_guard.is_empty():
+		return scene_guard
+
+	var dir_guard := ensure_parent_dir(path)
+	if not dir_guard.is_empty():
+		return dir_guard
+
+	var err := ResourceSaver.save(theme, path)
+	if err != OK:
+		return error_internal("Failed to save theme: %s" % error_string(err))
+
+	EditorInterface.get_resource_filesystem().scan()
+	return success({"path": path, "created": true})
+
+
+func _set_theme_color(params: Dictionary) -> Dictionary:
+	var result := require_string(params, "node_path")
+	if result[1] != null:
+		return result[1]
+	var node_path: String = result[0]
+
+	var result2 := require_string(params, "name")
+	if result2[1] != null:
+		return result2[1]
+	var color_name: String = result2[0]
+
+	var result3 := require_string(params, "color")
+	if result3[1] != null:
+		return result3[1]
+	var color_str: String = result3[0]
+
+	var node := find_node_by_path(node_path)
+	if node == null or not (node is Control):
+		return error_not_found("Control node at '%s'" % node_path)
+
+	var control: Control = node
+	var color := Color(color_str)
+
+	var theme_type: String = optional_string(params, "theme_type", "")
+	if theme_type.is_empty():
+		theme_type = control.get_class()
+
+	var had_old := control.has_theme_color_override(color_name)
+	var old_value: Variant = control.get("theme_override_colors/" + color_name) if had_old else null
+	var undo_redo := get_undo_redo()
+	undo_redo.create_action("MCP: Set theme color override")
+	undo_redo.add_do_method(control, "add_theme_color_override", color_name, color)
+	undo_redo.add_undo_method(self, "_restore_theme_override", control, "color", color_name, had_old, old_value)
+	undo_redo.commit_action()
+
+	return success({"node_path": node_path, "name": color_name, "color": color_str})
+
+
+func _set_theme_constant(params: Dictionary) -> Dictionary:
+	var result := require_string(params, "node_path")
+	if result[1] != null:
+		return result[1]
+	var node_path: String = result[0]
+
+	var result2 := require_string(params, "name")
+	if result2[1] != null:
+		return result2[1]
+	var const_name: String = result2[0]
+
+	var node := find_node_by_path(node_path)
+	if node == null or not (node is Control):
+		return error_not_found("Control node at '%s'" % node_path)
+
+	var control: Control = node
+	var value: int = optional_int(params, "value", 0)
+
+	var had_old := control.has_theme_constant_override(const_name)
+	var old_value: Variant = control.get("theme_override_constants/" + const_name) if had_old else null
+	var undo_redo := get_undo_redo()
+	undo_redo.create_action("MCP: Set theme constant override")
+	undo_redo.add_do_method(control, "add_theme_constant_override", const_name, value)
+	undo_redo.add_undo_method(self, "_restore_theme_override", control, "constant", const_name, had_old, old_value)
+	undo_redo.commit_action()
+
+	return success({"node_path": node_path, "name": const_name, "value": value})
+
+
+func _set_theme_font_size(params: Dictionary) -> Dictionary:
+	var result := require_string(params, "node_path")
+	if result[1] != null:
+		return result[1]
+	var node_path: String = result[0]
+
+	var result2 := require_string(params, "name")
+	if result2[1] != null:
+		return result2[1]
+	var font_name: String = result2[0]
+
+	var node := find_node_by_path(node_path)
+	if node == null or not (node is Control):
+		return error_not_found("Control node at '%s'" % node_path)
+
+	var control: Control = node
+	var size: int = optional_int(params, "size", 16)
+
+	var had_old := control.has_theme_font_size_override(font_name)
+	var old_value: Variant = control.get("theme_override_font_sizes/" + font_name) if had_old else null
+	var undo_redo := get_undo_redo()
+	undo_redo.create_action("MCP: Set theme font size override")
+	undo_redo.add_do_method(control, "add_theme_font_size_override", font_name, size)
+	undo_redo.add_undo_method(self, "_restore_theme_override", control, "font_size", font_name, had_old, old_value)
+	undo_redo.commit_action()
+
+	return success({"node_path": node_path, "name": font_name, "size": size})
+
+
+func _set_theme_stylebox(params: Dictionary) -> Dictionary:
+	var result := require_string(params, "node_path")
+	if result[1] != null:
+		return result[1]
+	var node_path: String = result[0]
+
+	var result2 := require_string(params, "name")
+	if result2[1] != null:
+		return result2[1]
+	var style_name: String = result2[0]
+
+	var node := find_node_by_path(node_path)
+	if node == null or not (node is Control):
+		return error_not_found("Control node at '%s'" % node_path)
+
+	var control: Control = node
+
+	var stylebox := StyleBoxFlat.new()
+
+	var bg_color: String = optional_string(params, "bg_color", "")
+	if not bg_color.is_empty():
+		stylebox.bg_color = Color(bg_color)
+
+	var border_color: String = optional_string(params, "border_color", "")
+	if not border_color.is_empty():
+		stylebox.border_color = Color(border_color)
+
+	var border_width: int = optional_int(params, "border_width", 0)
+	if border_width > 0:
+		stylebox.border_width_left = border_width
+		stylebox.border_width_top = border_width
+		stylebox.border_width_right = border_width
+		stylebox.border_width_bottom = border_width
+
+	var corner_radius: int = optional_int(params, "corner_radius", 0)
+	if corner_radius > 0:
+		stylebox.corner_radius_top_left = corner_radius
+		stylebox.corner_radius_top_right = corner_radius
+		stylebox.corner_radius_bottom_left = corner_radius
+		stylebox.corner_radius_bottom_right = corner_radius
+
+	var padding: int = optional_int(params, "padding", 0)
+	if padding > 0:
+		stylebox.content_margin_left = padding
+		stylebox.content_margin_top = padding
+		stylebox.content_margin_right = padding
+		stylebox.content_margin_bottom = padding
+
+	var had_old := control.has_theme_stylebox_override(style_name)
+	var old_value: Variant = control.get("theme_override_styles/" + style_name) if had_old else null
+	var undo_redo := get_undo_redo()
+	undo_redo.create_action("MCP: Set theme stylebox override")
+	undo_redo.add_do_method(control, "add_theme_stylebox_override", style_name, stylebox)
+	undo_redo.add_do_reference(stylebox)
+	undo_redo.add_undo_method(self, "_restore_theme_override", control, "stylebox", style_name, had_old, old_value)
+	if old_value is Resource:
+		undo_redo.add_undo_reference(old_value)
+	undo_redo.commit_action()
+
+	return success({"node_path": node_path, "name": style_name, "type": "StyleBoxFlat"})
+
+
+func _setup_control(params: Dictionary) -> Dictionary:
+	var result := require_string(params, "node_path")
+	if result[1] != null:
+		return result[1]
+	var node_path: String = result[0]
+
+	var node := find_node_by_path(node_path)
+	if node == null or not (node is Control):
+		return error_not_found("Control node at '%s'" % node_path)
+
+	var control: Control = node
+	var applied: Array = []
+	var old_state := _capture_control_setup_state(control)
+	var target: Control = control.duplicate() as Control
+
+	# Anchor preset
+	var anchor_preset: String = optional_string(params, "anchor_preset", "")
+	if not anchor_preset.is_empty():
+		var preset_map := {
+			"top_left": Control.PRESET_TOP_LEFT,
+			"top_right": Control.PRESET_TOP_RIGHT,
+			"bottom_left": Control.PRESET_BOTTOM_LEFT,
+			"bottom_right": Control.PRESET_BOTTOM_RIGHT,
+			"center_left": Control.PRESET_CENTER_LEFT,
+			"center_top": Control.PRESET_CENTER_TOP,
+			"center_right": Control.PRESET_CENTER_RIGHT,
+			"center_bottom": Control.PRESET_CENTER_BOTTOM,
+			"center": Control.PRESET_CENTER,
+			"left_wide": Control.PRESET_LEFT_WIDE,
+			"top_wide": Control.PRESET_TOP_WIDE,
+			"right_wide": Control.PRESET_RIGHT_WIDE,
+			"bottom_wide": Control.PRESET_BOTTOM_WIDE,
+			"vcenter_wide": Control.PRESET_VCENTER_WIDE,
+			"hcenter_wide": Control.PRESET_HCENTER_WIDE,
+			"full_rect": Control.PRESET_FULL_RECT,
+		}
+		if preset_map.has(anchor_preset):
+			target.set_anchors_and_offsets_preset(preset_map[anchor_preset])
+			applied.append("anchor_preset=%s" % anchor_preset)
+
+	# Min size
+	var min_size_str: String = optional_string(params, "min_size", "")
+	if not min_size_str.is_empty():
+		var expr := Expression.new()
+		if expr.parse(min_size_str) == OK:
+			var val = expr.execute()
+			if val is Vector2:
+				target.custom_minimum_size = val
+				applied.append("min_size=%s" % min_size_str)
+
+	# Size flags horizontal
+	var sf_h: String = optional_string(params, "size_flags_h", "")
+	if not sf_h.is_empty():
+		var flags_map := {
+			"fill": Control.SIZE_FILL,
+			"expand": Control.SIZE_EXPAND,
+			"fill_expand": Control.SIZE_EXPAND_FILL,
+			"shrink_center": Control.SIZE_SHRINK_CENTER,
+			"shrink_end": Control.SIZE_SHRINK_END,
+		}
+		if flags_map.has(sf_h):
+			target.size_flags_horizontal = flags_map[sf_h]
+			applied.append("size_flags_h=%s" % sf_h)
+
+	# Size flags vertical
+	var sf_v: String = optional_string(params, "size_flags_v", "")
+	if not sf_v.is_empty():
+		var flags_map := {
+			"fill": Control.SIZE_FILL,
+			"expand": Control.SIZE_EXPAND,
+			"fill_expand": Control.SIZE_EXPAND_FILL,
+			"shrink_center": Control.SIZE_SHRINK_CENTER,
+			"shrink_end": Control.SIZE_SHRINK_END,
+		}
+		if flags_map.has(sf_v):
+			target.size_flags_vertical = flags_map[sf_v]
+			applied.append("size_flags_v=%s" % sf_v)
+
+	# Margins (for MarginContainer)
+	if params.has("margins") and params["margins"] is Dictionary:
+		var margins: Dictionary = params["margins"]
+		if target is MarginContainer:
+			if margins.has("left"):
+				target.add_theme_constant_override("margin_left", int(margins["left"]))
+			if margins.has("top"):
+				target.add_theme_constant_override("margin_top", int(margins["top"]))
+			if margins.has("right"):
+				target.add_theme_constant_override("margin_right", int(margins["right"]))
+			if margins.has("bottom"):
+				target.add_theme_constant_override("margin_bottom", int(margins["bottom"]))
+			applied.append("margins=%s" % str(margins))
+
+	# Separation (for VBox/HBoxContainer)
+	if params.has("separation"):
+		var sep: int = optional_int(params, "separation")
+		if target is BoxContainer:
+			target.add_theme_constant_override("separation", sep)
+			applied.append("separation=%d" % sep)
+
+	# Grow direction horizontal
+	var grow_h: String = optional_string(params, "grow_h", "")
+	if not grow_h.is_empty():
+		var grow_map := {
+			"begin": Control.GROW_DIRECTION_BEGIN,
+			"end": Control.GROW_DIRECTION_END,
+			"both": Control.GROW_DIRECTION_BOTH,
+		}
+		if grow_map.has(grow_h):
+			target.grow_horizontal = grow_map[grow_h]
+			applied.append("grow_h=%s" % grow_h)
+
+	# Grow direction vertical
+	var grow_v: String = optional_string(params, "grow_v", "")
+	if not grow_v.is_empty():
+		var grow_map := {
+			"begin": Control.GROW_DIRECTION_BEGIN,
+			"end": Control.GROW_DIRECTION_END,
+			"both": Control.GROW_DIRECTION_BOTH,
+		}
+		if grow_map.has(grow_v):
+			target.grow_vertical = grow_map[grow_v]
+			applied.append("grow_v=%s" % grow_v)
+
+	if not applied.is_empty():
+		var new_state := _capture_control_setup_state(target)
+		_register_control_setup_undo(control, old_state, new_state)
+	target.free()
+	return success({"node_path": node_path, "applied": applied, "count": applied.size()})
+
+
+func _restore_theme_override(control: Control, kind: String, override_name: String, had_old: bool, old_value: Variant) -> void:
+	match kind:
+		"color":
+			if had_old:
+				control.add_theme_color_override(override_name, old_value)
+			else:
+				control.remove_theme_color_override(override_name)
+		"constant":
+			if had_old:
+				control.add_theme_constant_override(override_name, old_value)
+			else:
+				control.remove_theme_constant_override(override_name)
+		"font_size":
+			if had_old:
+				control.add_theme_font_size_override(override_name, old_value)
+			else:
+				control.remove_theme_font_size_override(override_name)
+		"stylebox":
+			if had_old:
+				control.add_theme_stylebox_override(override_name, old_value)
+			else:
+				control.remove_theme_stylebox_override(override_name)
+
+
+func _capture_control_setup_state(control: Control) -> Dictionary:
+	var state := {"properties": {}, "theme_constants": {}}
+	for property: String in [
+		"anchor_left", "anchor_top", "anchor_right", "anchor_bottom",
+		"offset_left", "offset_top", "offset_right", "offset_bottom",
+		"custom_minimum_size", "size_flags_horizontal", "size_flags_vertical",
+		"grow_horizontal", "grow_vertical",
+	]:
+		state["properties"][property] = control.get(property)
+	for constant_name: String in ["margin_left", "margin_top", "margin_right", "margin_bottom", "separation"]:
+		var had_override := control.has_theme_constant_override(constant_name)
+		state["theme_constants"][constant_name] = {
+			"had": had_override,
+			"value": control.get("theme_override_constants/" + constant_name) if had_override else null,
+		}
+	return state
+
+
+func _register_control_setup_undo(control: Control, old_state: Dictionary, new_state: Dictionary) -> void:
+	var undo_redo := get_undo_redo()
+	undo_redo.create_action("MCP: Setup Control")
+	for property: String in new_state["properties"]:
+		undo_redo.add_do_property(control, property, new_state["properties"][property])
+		undo_redo.add_undo_property(control, property, old_state["properties"][property])
+	for constant_name: String in new_state["theme_constants"]:
+		var new_constant: Dictionary = new_state["theme_constants"][constant_name]
+		var old_constant: Dictionary = old_state["theme_constants"][constant_name]
+		undo_redo.add_do_method(self, "_restore_theme_override", control, "constant", constant_name, new_constant["had"], new_constant["value"])
+		undo_redo.add_undo_method(self, "_restore_theme_override", control, "constant", constant_name, old_constant["had"], old_constant["value"])
+	undo_redo.commit_action()
+
+
+func _get_theme_info(params: Dictionary) -> Dictionary:
+	var result := require_string(params, "node_path")
+	if result[1] != null:
+		return result[1]
+	var node_path: String = result[0]
+
+	var node := find_node_by_path(node_path)
+	if node == null or not (node is Control):
+		return error_not_found("Control node at '%s'" % node_path)
+
+	var control: Control = node
+	var info := {"node_path": node_path, "class": control.get_class()}
+
+	# Check if node has a theme
+	var theme := control.theme
+	if theme:
+		info["theme_path"] = theme.resource_path
+		info["type_list"] = Array(theme.get_type_list())
+
+	# List overrides
+	var overrides := {"colors": {}, "constants": {}, "font_sizes": {}, "styleboxes": {}}
+	for prop in control.get_property_list():
+		var pname: String = prop["name"]
+		if pname.begins_with("theme_override_colors/"):
+			var key := pname.substr(22)
+			overrides["colors"][key] = "#" + (control.get(pname) as Color).to_html()
+		elif pname.begins_with("theme_override_constants/"):
+			var key := pname.substr(25)
+			overrides["constants"][key] = control.get(pname)
+		elif pname.begins_with("theme_override_font_sizes/"):
+			var key := pname.substr(26)
+			overrides["font_sizes"][key] = control.get(pname)
+		elif pname.begins_with("theme_override_styles/"):
+			var key := pname.substr(22)
+			var style = control.get(pname)
+			overrides["styleboxes"][key] = style.get_class() if style else null
+
+	info["overrides"] = overrides
+	return success(info)

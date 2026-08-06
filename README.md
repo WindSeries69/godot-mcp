@@ -4,25 +4,37 @@
 
 # <a id="fr"></a>godot-mcp
 
-Pont MCP entre un assistant IA et l'éditeur Godot. 6 outils pour contrôler l'éditeur : scène, nœuds, scripts, capture d'écran, exécution GDScript, et 175+ méthodes via `godot_call`.
+Pont MCP entre un assistant IA et l'éditeur Godot.
 
 ```
-Assistant IA <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Plugin Godot
+Assistant IA <---stdio/MCP---> godot-mcp <---WebSocket:6505---> Plugin Godot
 ```
+
+**6 outils MCP** pour piloter l'éditeur : `godot_call` (175+ méthodes), `godot_list_methods`, `godot_info`, `godot_screenshot`, `godot_execute`, `godot_status`.
 
 ## Installation
 
-### Plugin Godot
+### 1. Plugin Godot
 
-Copiez le dossier `addons/godot_mcp/` dans `addons/` de votre projet Godot, puis activez-le : **Projet → Paramètres → Plugins → godot-mcp → Activer**
+Copiez le dossier `plugin/` dans `addons/plugin/` de votre projet Godot.
 
-### Serveur
+```
+votre-projet/
+└── addons/
+    └── plugin/          ← copiez plugin/ ici
+```
+
+Activez-le : **Projet → Paramètres du projet → Plugins → godot-mcp → Activer**
+
+### 2. Serveur
 
 ```bash
 npm install && npm run build && npm start
 ```
 
-### Configuration MCP
+### 3. Client MCP
+
+Ajoutez à la config de votre client IA (`.mcp.json`, `claude.json`, `opencode.json`) :
 
 ```json
 {
@@ -35,18 +47,28 @@ npm install && npm run build && npm start
 }
 ```
 
-Le serveur écoute sur les ports **6505–6514** (`GODOT_MCP_PORT` pour changer). Le plugin Godot s'y connecte automatiquement.
-
 ## Outils
 
 | Outil | Description |
 |-------|-------------|
-| `godot_call(method, params)` | Appelle n'importe quelle méthode du plugin (175+) |
-| `godot_list_methods(category?)` | Liste les méthodes par catégorie |
+| `godot_call` | Appelle n'importe quelle méthode (175+) |
+| `godot_list_methods` | Liste les méthodes par catégorie |
 | `godot_info` | Infos projet |
-| `godot_screenshot` | Capture la vue éditeur en PNG |
-| `godot_execute(code)` | Exécute du GDScript |
+| `godot_screenshot` | Capture éditeur en PNG |
+| `godot_execute` | Exécute du GDScript |
 | `godot_status` | Vérifie la connexion |
+
+## Arborescence
+
+```
+godot-mcp/
+├── plugin/              ← Plugin Godot (à copier dans votre projet)
+├── src/index.ts         ← Serveur MCP (Node.js)
+├── package.json
+├── tsconfig.json
+├── README.md
+└── LICENSE              ← MIT
+```
 
 ## Licence
 
@@ -56,25 +78,37 @@ MIT
 
 # <a id="en"></a>godot-mcp
 
-MCP bridge between an AI assistant and the Godot editor. 6 tools to control the editor: scene, nodes, scripts, screenshots, GDScript execution, and 175+ methods via `godot_call`.
+MCP bridge between an AI assistant and the Godot editor.
 
 ```
-AI Assistant <--stdio/MCP--> godot-mcp <--WebSocket:6505--> Godot Plugin
+AI Assistant <---stdio/MCP---> godot-mcp <---WebSocket:6505---> Godot Plugin
 ```
+
+**6 MCP tools** to control the editor: `godot_call` (175+ methods), `godot_list_methods`, `godot_info`, `godot_screenshot`, `godot_execute`, `godot_status`.
 
 ## Setup
 
-### Godot Plugin
+### 1. Godot Plugin
 
-Copy `addons/godot_mcp/` into your Godot project's `addons/` folder, then enable it: **Project → Project Settings → Plugins → godot-mcp → Enable**
+Copy the `plugin/` folder into your project's `addons/plugin/`.
 
-### Server
+```
+your-project/
+└── addons/
+    └── plugin/          ← copy plugin/ here
+```
+
+Enable it: **Project → Project Settings → Plugins → godot-mcp → Enable**
+
+### 2. Server
 
 ```bash
 npm install && npm run build && npm start
 ```
 
-### MCP Config
+### 3. MCP Client
+
+Add to your AI client config (`.mcp.json`, `claude.json`, `opencode.json`):
 
 ```json
 {
@@ -87,18 +121,28 @@ npm install && npm run build && npm start
 }
 ```
 
-Listens on ports **6505–6514** (`GODOT_MCP_PORT` to change). Auto-connects to Godot.
-
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `godot_call(method, params)` | Call any of the 175+ plugin methods |
-| `godot_list_methods(category?)` | List methods by category |
+| `godot_call` | Call any method (175+) |
+| `godot_list_methods` | List methods by category |
 | `godot_info` | Project info |
-| `godot_screenshot` | Capture editor viewport as PNG |
-| `godot_execute(code)` | Run GDScript |
+| `godot_screenshot` | Editor screenshot in PNG |
+| `godot_execute` | Run GDScript |
 | `godot_status` | Check connection |
+
+## Structure
+
+```
+godot-mcp/
+├── plugin/              ← Godot plugin (copy to your project)
+├── src/index.ts         ← MCP server (Node.js)
+├── package.json
+├── tsconfig.json
+├── README.md
+└── LICENSE              ← MIT
+```
 
 ## License
 
