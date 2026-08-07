@@ -1,5 +1,7 @@
 @tool
-extends "res://plugin/commands/base_command.gd"
+extends "res://addons/godot_mcp/commands/base_command.gd"
+
+const PropertyParser := preload("res://addons/godot_mcp/utils/property_parser.gd")
 
 
 func get_commands() -> Dictionary:
@@ -28,29 +30,7 @@ func _get_particles_node_any(node_path: String) -> Node:
 
 
 func _parse_color(color_str: String) -> Color:
-	# Support hex "#RRGGBB", "#RRGGBBAA", or named colors
-	if color_str.begins_with("#"):
-		return Color.html(color_str)
-	# Try named color
-	match color_str.to_lower():
-		"red": return Color.RED
-		"green": return Color.GREEN
-		"blue": return Color.BLUE
-		"white": return Color.WHITE
-		"black": return Color.BLACK
-		"yellow": return Color.YELLOW
-		"orange": return Color(1.0, 0.5, 0.0)
-		"gray", "grey": return Color.GRAY
-		"cyan": return Color.CYAN
-		"magenta": return Color.MAGENTA
-		"transparent": return Color(0, 0, 0, 0)
-	# Try Expression parser for Color(r,g,b,a)
-	var expr := Expression.new()
-	if expr.parse(color_str) == OK:
-		var parsed = expr.execute()
-		if parsed is Color:
-			return parsed
-	return Color.WHITE
+	return PropertyParser.parse_value(color_str, TYPE_COLOR)
 
 
 func _create_particles(params: Dictionary) -> Dictionary:

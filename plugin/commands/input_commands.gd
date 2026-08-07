@@ -1,5 +1,5 @@
 @tool
-extends "res://plugin/commands/base_command.gd"
+extends "res://addons/godot_mcp/commands/base_command.gd"
 
 const COMMANDS_PATH := "user://mcp_input_commands"
 

@@ -1,5 +1,5 @@
 @tool
-extends "res://plugin/commands/base_command.gd"
+extends "res://addons/godot_mcp/commands/base_command.gd"
 
 ## Editor-side commands for runtime game inspection.
 ## Communicates with MCPGameInspector autoload via file-based IPC.
@@ -45,7 +45,7 @@ func _get_game_scene_tree(params: Dictionary) -> Dictionary:
 	if named_only:
 		cmd_params["named_only"] = true
 
-	return await _send_game_command("get_scene_tree", cmd_params)
+	return await send_game_command("get_scene_tree", cmd_params)
 
 
 func _get_game_node_properties(params: Dictionary) -> Dictionary:
@@ -58,7 +58,7 @@ func _get_game_node_properties(params: Dictionary) -> Dictionary:
 	if params.has("properties") and params["properties"] is Array:
 		cmd_params["properties"] = params["properties"]
 
-	return await _send_game_command("get_node_properties", cmd_params)
+	return await send_game_command("get_node_properties", cmd_params)
 
 
 func _set_game_node_property(params: Dictionary) -> Dictionary:
@@ -73,7 +73,7 @@ func _set_game_node_property(params: Dictionary) -> Dictionary:
 	if not params.has("value"):
 		return error_invalid_params("Missing required parameter: value")
 
-	return await _send_game_command("set_node_property", {
+	return await send_game_command("set_node_property", {
 		"node_path": result[0],
 		"property": prop_result[0],
 		"value": params["value"],
@@ -85,7 +85,7 @@ func _execute_game_script(params: Dictionary) -> Dictionary:
 	if result[1] != null:
 		return result[1]
 
-	return await _send_game_command("execute_script", {
+	return await send_game_command("execute_script", {
 		"code": result[0],
 	}, 10.0)
 
@@ -100,7 +100,7 @@ func _capture_frames(params: Dictionary) -> Dictionary:
 	var estimated_seconds: float = (count * frame_interval) / 60.0 + 2.0
 	var timeout := minf(estimated_seconds, 25.0)
 
-	return await _send_game_command("capture_frames", {
+	return await send_game_command("capture_frames", {
 		"count": count,
 		"frame_interval": frame_interval,
 		"half_resolution": half_resolution,
@@ -122,7 +122,7 @@ func _monitor_properties(params: Dictionary) -> Dictionary:
 	var estimated_seconds: float = (frame_count * frame_interval) / 60.0 + 2.0
 	var timeout := minf(estimated_seconds, 25.0)
 
-	return await _send_game_command("monitor_properties", {
+	return await send_game_command("monitor_properties", {
 		"node_path": result[0],
 		"properties": params["properties"],
 		"frame_count": frame_count,
@@ -131,11 +131,11 @@ func _monitor_properties(params: Dictionary) -> Dictionary:
 
 
 func _start_recording(params: Dictionary) -> Dictionary:
-	return await _send_game_command("start_recording", {})
+	return await send_game_command("start_recording", {})
 
 
 func _stop_recording(params: Dictionary) -> Dictionary:
-	return await _send_game_command("stop_recording", {}, 5.0)
+	return await send_game_command("stop_recording", {}, 5.0)
 
 
 func _replay_recording(params: Dictionary) -> Dictionary:
@@ -156,7 +156,7 @@ func _replay_recording(params: Dictionary) -> Dictionary:
 			max_time_ms = t
 	var timeout := (max_time_ms / 1000.0 / speed) + 5.0
 
-	return await _send_game_command("replay_recording", {
+	return await send_game_command("replay_recording", {
 		"events": params["events"],
 		"speed": speed,
 	}, minf(timeout, 120.0))
@@ -171,7 +171,7 @@ func _find_nodes_by_script(params: Dictionary) -> Dictionary:
 	if params.has("properties") and params["properties"] is Array:
 		cmd_params["properties"] = params["properties"]
 
-	return await _send_game_command("find_nodes_by_script", cmd_params)
+	return await send_game_command("find_nodes_by_script", cmd_params)
 
 
 func _get_autoload(params: Dictionary) -> Dictionary:
@@ -183,14 +183,14 @@ func _get_autoload(params: Dictionary) -> Dictionary:
 	if params.has("properties") and params["properties"] is Array:
 		cmd_params["properties"] = params["properties"]
 
-	return await _send_game_command("get_autoload", cmd_params)
+	return await send_game_command("get_autoload", cmd_params)
 
 
 func _batch_get_properties(params: Dictionary) -> Dictionary:
 	if not params.has("nodes") or not params["nodes"] is Array:
 		return error_invalid_params("'nodes' array is required")
 
-	return await _send_game_command("batch_get_properties", {
+	return await send_game_command("batch_get_properties", {
 		"nodes": params["nodes"],
 	})
 
@@ -200,7 +200,7 @@ func _find_ui_elements(params: Dictionary) -> Dictionary:
 	var type_filter: String = optional_string(params, "type_filter")
 	if not type_filter.is_empty():
 		cmd_params["type_filter"] = type_filter
-	return await _send_game_command("find_ui_elements", cmd_params)
+	return await send_game_command("find_ui_elements", cmd_params)
 
 
 func _click_button_by_text(params: Dictionary) -> Dictionary:
@@ -212,7 +212,7 @@ func _click_button_by_text(params: Dictionary) -> Dictionary:
 	var partial: bool = optional_bool(params, "partial", true)
 	cmd_params["partial"] = partial
 
-	return await _send_game_command("click_button_by_text", cmd_params)
+	return await send_game_command("click_button_by_text", cmd_params)
 
 
 func _wait_for_node(params: Dictionary) -> Dictionary:
@@ -223,7 +223,7 @@ func _wait_for_node(params: Dictionary) -> Dictionary:
 	var timeout: float = optional_float(params, "timeout", 5.0)
 	var poll_frames: int = optional_int(params, "poll_frames", 5)
 
-	return await _send_game_command("wait_for_node", {
+	return await send_game_command("wait_for_node", {
 		"node_path": result[0],
 		"timeout": timeout,
 		"poll_frames": poll_frames,
@@ -246,7 +246,7 @@ func _find_nearby_nodes(params: Dictionary) -> Dictionary:
 	if params.has("max_results"):
 		cmd_params["max_results"] = optional_int(params, "max_results")
 
-	return await _send_game_command("find_nearby_nodes", cmd_params)
+	return await send_game_command("find_nearby_nodes", cmd_params)
 
 
 func _navigate_to(params: Dictionary) -> Dictionary:
@@ -263,7 +263,7 @@ func _navigate_to(params: Dictionary) -> Dictionary:
 	if params.has("move_speed"):
 		cmd_params["move_speed"] = optional_float(params, "move_speed")
 
-	return await _send_game_command("navigate_to", cmd_params)
+	return await send_game_command("navigate_to", cmd_params)
 
 
 func _move_to(params: Dictionary) -> Dictionary:
@@ -290,7 +290,7 @@ func _move_to(params: Dictionary) -> Dictionary:
 	var game_timeout: float = optional_float(params, "timeout", 15.0)
 	var ipc_timeout: float = game_timeout + 5.0
 
-	return await _send_game_command("move_to", cmd_params, ipc_timeout)
+	return await send_game_command("move_to", cmd_params, ipc_timeout)
 
 
 func _watch_signals(params: Dictionary) -> Dictionary:
@@ -306,73 +306,4 @@ func _watch_signals(params: Dictionary) -> Dictionary:
 	# Dynamic timeout: duration + overhead
 	var timeout_sec: float = (duration_ms / 1000.0) + 5.0
 
-	return await _send_game_command("watch_signals", cmd_params, timeout_sec)
-
-
-# ── IPC Helper ────────────────────────────────────────────────────────────────
-
-func _send_game_command(command: String, params: Dictionary, timeout_sec: float = 5.0) -> Dictionary:
-	var ei := get_editor()
-	if not ei.is_playing_scene():
-		return error(-32000, "No scene is currently playing", {"suggestion": "Use play_scene first"})
-
-	var user_dir := get_game_user_dir()
-	var request_path := user_dir + "/mcp_game_request"
-	var response_path := user_dir + "/mcp_game_response"
-
-	# Clean stale response
-	if FileAccess.file_exists(response_path):
-		DirAccess.remove_absolute(response_path)
-
-	# Write request
-	var request_data := JSON.stringify({"command": command, "params": params})
-	var req := FileAccess.open(request_path, FileAccess.WRITE)
-	if req == null:
-		return error_internal("Could not create game request file")
-	req.store_string(request_data)
-	req.close()
-
-	# Poll for response
-	var attempts := int(timeout_sec / 0.1)
-	while attempts > 0:
-		await get_tree().create_timer(0.1).timeout
-		if FileAccess.file_exists(response_path):
-			break
-		# Check if game is still running
-		if not ei.is_playing_scene():
-			if FileAccess.file_exists(request_path):
-				DirAccess.remove_absolute(request_path)
-			return error(-32000, "Game stopped during command execution")
-		attempts -= 1
-
-	if not FileAccess.file_exists(response_path):
-		# Try to auto-resume the debugger (runtime error may have paused the game)
-		if ei.is_playing_scene():
-			try_debugger_continue()
-			# Give the game a chance to recover and write a response
-			for _retry in 20:
-				await get_tree().create_timer(0.1).timeout
-				if FileAccess.file_exists(response_path):
-					break
-
-	if not FileAccess.file_exists(response_path):
-		if FileAccess.file_exists(request_path):
-			DirAccess.remove_absolute(request_path)
-		return build_timeout_error(timeout_sec)
-
-	# Read response
-	var file := FileAccess.open(response_path, FileAccess.READ)
-	if file == null:
-		return error_internal("Could not read game response file")
-	var text := file.get_as_text()
-	file.close()
-	DirAccess.remove_absolute(response_path)
-
-	var parsed = JSON.parse_string(text)
-	if parsed == null or not parsed is Dictionary:
-		return error_internal("Invalid response JSON from game")
-
-	if parsed.has("error"):
-		return error(-32000, str(parsed["error"]))
-
-	return success(parsed)
+	return await send_game_command("watch_signals", cmd_params, timeout_sec)

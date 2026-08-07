@@ -1,5 +1,5 @@
 @tool
-extends "res://plugin/commands/base_command.gd"
+extends "res://addons/godot_mcp/commands/base_command.gd"
 
 ## Runs the project in a separate headless Godot process and returns its output.
 ##

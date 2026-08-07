@@ -1,5 +1,5 @@
 @tool
-extends "res://plugin/commands/base_command.gd"
+extends "res://addons/godot_mcp/commands/base_command.gd"
 
 ## Test automation framework tools.
 ## Editor-side orchestration + runtime assertions via file-based IPC.
@@ -102,7 +102,7 @@ func _run_test_scenario(params: Dictionary) -> Dictionary:
 				_test_results.append(step_result)
 
 			"screenshot":
-				var screenshot_result := await _send_game_command("capture_frames", {
+				var screenshot_result := await send_game_command("capture_frames", {
 					"count": 1,
 					"frame_interval": 1,
 					"half_resolution": optional_bool(step, "half_resolution", true),
@@ -160,7 +160,7 @@ func _assert_node_state(params: Dictionary) -> Dictionary:
 	if operator not in valid_operators:
 		return error_invalid_params("Invalid operator '%s'. Valid: %s" % [operator, str(valid_operators)])
 
-	var result := await _send_game_command("assert_node_state", {
+	var result := await send_game_command("assert_node_state", {
 		"node_path": path_result[0],
 		"property": prop_result[0],
 		"expected": params["expected"],
@@ -191,7 +191,7 @@ func _assert_screen_text(params: Dictionary) -> Dictionary:
 	var case_sensitive: bool = optional_bool(params, "case_sensitive", true)
 
 	# Use find_ui_elements to get all visible UI text
-	var ui_result := await _send_game_command("find_ui_elements", {})
+	var ui_result := await send_game_command("find_ui_elements", {})
 	if ui_result.has("error"):
 		return ui_result
 
@@ -436,7 +436,7 @@ func _execute_wait_step(step: Dictionary) -> Dictionary:
 	## Execute a wait step: wait for seconds or wait for a node to appear.
 	if step.has("node_path"):
 		var timeout: float = float(step.get("timeout", 5.0))
-		var result := await _send_game_command("wait_for_node", {
+		var result := await send_game_command("wait_for_node", {
 			"node_path": str(step["node_path"]),
 			"timeout": timeout,
 			"poll_frames": int(step.get("poll_frames", 5)),
@@ -454,7 +454,7 @@ func _execute_assert_step(step: Dictionary) -> Dictionary:
 	## Execute an assertion step within a scenario.
 	if step.has("text"):
 		# Screen text assertion
-		var ui_result := await _send_game_command("find_ui_elements", {})
+		var ui_result := await send_game_command("find_ui_elements", {})
 		if ui_result.has("error"):
 			return {"passed": false, "error": "Could not get UI elements"}
 
@@ -477,7 +477,7 @@ func _execute_assert_step(step: Dictionary) -> Dictionary:
 
 	elif step.has("node_path") and step.has("property"):
 		# Node state assertion
-		var result := await _send_game_command("assert_node_state", {
+		var result := await send_game_command("assert_node_state", {
 			"node_path": str(step["node_path"]),
 			"property": str(step["property"]),
 			"expected": step.get("expected", null),
@@ -493,74 +493,6 @@ func _execute_assert_step(step: Dictionary) -> Dictionary:
 
 	else:
 		return {"passed": false, "error": "Assert step requires 'text' or 'node_path'+'property'"}
-
-
-# ── IPC Helper ────────────────────────────────────────────────────────────────
-
-func _send_game_command(command: String, params: Dictionary = {}, timeout_sec: float = 5.0) -> Dictionary:
-	var ei := get_editor()
-	if not ei.is_playing_scene():
-		return error(-32000, "No scene is currently playing", {"suggestion": "Use play_scene first"})
-
-	var user_dir := get_game_user_dir()
-	var request_path := user_dir + "/mcp_game_request"
-	var response_path := user_dir + "/mcp_game_response"
-
-	# Clean stale response
-	if FileAccess.file_exists(response_path):
-		DirAccess.remove_absolute(response_path)
-
-	# Write request
-	var request_data := JSON.stringify({"command": command, "params": params})
-	var req := FileAccess.open(request_path, FileAccess.WRITE)
-	if req == null:
-		return error_internal("Could not create game request file")
-	req.store_string(request_data)
-	req.close()
-
-	# Poll for response
-	var attempts := int(timeout_sec / 0.1)
-	while attempts > 0:
-		await get_tree().create_timer(0.1).timeout
-		if FileAccess.file_exists(response_path):
-			break
-		# Check if game is still running
-		if not ei.is_playing_scene():
-			if FileAccess.file_exists(request_path):
-				DirAccess.remove_absolute(request_path)
-			return error(-32000, "Game stopped during command execution")
-		attempts -= 1
-
-	if not FileAccess.file_exists(response_path):
-		# Try to auto-resume the debugger
-		if ei.is_playing_scene():
-			try_debugger_continue()
-			for _retry in 20:
-				await get_tree().create_timer(0.1).timeout
-				if FileAccess.file_exists(response_path):
-					break
-
-	if not FileAccess.file_exists(response_path):
-		if FileAccess.file_exists(request_path):
-			DirAccess.remove_absolute(request_path)
-		return build_timeout_error(timeout_sec)
-
-	# Read response
-	var file := FileAccess.open(response_path, FileAccess.READ)
-	if file == null:
-		return error_internal("Could not read game response file")
-	var text := file.get_as_text()
-	file.close()
-	DirAccess.remove_absolute(response_path)
-
-	var parsed = JSON.parse_string(text)
-	if parsed == null or not parsed is Dictionary:
-		return error_internal("Invalid response JSON from game")
-
-	if parsed.has("error"):
-		return error(-32000, str(parsed["error"]))
-
-	return success(parsed)
 
 
 # ── Utility ───────────────────────────────────────────────────────────────────

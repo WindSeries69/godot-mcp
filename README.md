@@ -16,12 +16,12 @@ Assistant IA <---stdio/MCP---> godot-mcp <---WebSocket:6505---> Plugin Godot
 
 ### 1. Plugin Godot
 
-Copiez le dossier `plugin/` dans `addons/plugin/` de votre projet Godot.
+Copiez le dossier `plugin/` dans `addons/godot_mcp/` de votre projet Godot.
 
 ```
 votre-projet/
 └── addons/
-    └── plugin/          ← copiez plugin/ ici
+    └── godot_mcp/       ← copiez plugin/ ici
 ```
 
 Activez-le : **Projet → Paramètres du projet → Plugins → godot-mcp → Activer**
@@ -74,6 +74,8 @@ godot-mcp/
 
 MIT
 
+Ce plugin Godot dérive de [godot-mcp-pro](https://github.com/youichi-uda/godot-mcp-pro) (Youichi Uda, MIT).
+
 ---
 
 # <a id="en"></a>godot-mcp
@@ -90,12 +92,12 @@ AI Assistant <---stdio/MCP---> godot-mcp <---WebSocket:6505---> Godot Plugin
 
 ### 1. Godot Plugin
 
-Copy the `plugin/` folder into your project's `addons/plugin/`.
+Copy the `plugin/` folder into your project's `addons/godot_mcp/`.
 
 ```
 your-project/
 └── addons/
-    └── plugin/          ← copy plugin/ here
+    └── godot_mcp/       ← copy plugin/ here
 ```
 
 Enable it: **Project → Project Settings → Plugins → godot-mcp → Enable**
@@ -147,3 +149,5 @@ godot-mcp/
 ## License
 
 MIT
+
+This Godot plugin is derived from [godot-mcp-pro](https://github.com/youichi-uda/godot-mcp-pro) (Youichi Uda, MIT).

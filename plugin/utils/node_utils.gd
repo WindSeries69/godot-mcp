@@ -38,7 +38,7 @@ static func get_node_tree(node: Node, root: Node = null, max_depth: int = -1, cu
 
 ## Get all properties of a node as a serializable dictionary
 static func get_node_properties_dict(node: Node) -> Dictionary:
-	var PropertyParser := preload("res://plugin/utils/property_parser.gd")
+	var PropertyParser := preload("res://addons/godot_mcp/utils/property_parser.gd")
 	var result: Dictionary = {}
 	var property_list := node.get_property_list()
 

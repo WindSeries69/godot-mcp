@@ -220,8 +220,24 @@ static func _parse_color(value: Variant) -> Color:
 			3: return Color(nums[0], nums[1], nums[2])
 			4: return Color(nums[0], nums[1], nums[2], nums[3])
 	# Try named color
-	if Color.html_is_valid(s):
-		return Color.html(s)
+	match s.to_lower():
+		"red": return Color.RED
+		"green": return Color.GREEN
+		"blue": return Color.BLUE
+		"white": return Color.WHITE
+		"black": return Color.BLACK
+		"yellow": return Color.YELLOW
+		"orange": return Color(1.0, 0.5, 0.0)
+		"gray", "grey": return Color.GRAY
+		"cyan": return Color.CYAN
+		"magenta": return Color.MAGENTA
+		"transparent": return Color(0, 0, 0, 0)
+	# Try Expression parser for Color(r,g,b,a)
+	var expr := Expression.new()
+	if expr.parse(s) == OK:
+		var parsed = expr.execute()
+		if parsed is Color:
+			return parsed
 	return Color.WHITE
 
 

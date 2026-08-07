@@ -450,7 +450,7 @@ func set_property_with_undo(target: Object, property: String, new_value: Variant
 ## when the game IS running and merely paused by a runtime error.
 
 ## Locate the editor's ScriptEditorDebugger node (BFS from base control).
-func _find_script_editor_debugger() -> Node:
+static func _find_script_editor_debugger() -> Node:
 	var base := EditorInterface.get_base_control()
 	if base == null:
 		return null
@@ -465,7 +465,7 @@ func _find_script_editor_debugger() -> Node:
 
 
 ## Look up an editor theme icon by name (locale-independent), or null.
-func _get_editor_icon(icon_name: String) -> Texture2D:
+static func _get_editor_icon(icon_name: String) -> Texture2D:
 	var base := EditorInterface.get_base_control()
 	if base != null and base.has_theme_icon(icon_name, "EditorIcons"):
 		return base.get_theme_icon(icon_name, "EditorIcons")
@@ -477,7 +477,7 @@ func _get_editor_icon(icon_name: String) -> Texture2D:
 ## non-English editors (issue #34: Italian → "Continua"). Match by the editor
 ## theme icon "DebugContinue" first, falling back to the English text only if
 ## the icon can't be resolved.
-func _find_debugger_continue_button() -> Button:
+static func _find_debugger_continue_button() -> Button:
 	var dbg := _find_script_editor_debugger()
 	if dbg == null:
 		return null

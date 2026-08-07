@@ -1,10 +1,12 @@
 @tool
 extends EditorPlugin
 
+const _BaseCommand := preload("res://addons/godot_mcp/commands/base_command.gd")
+
 const _MCP_AUTOLOADS: Array[Array] = [
-	["autoload/MCPScreenshot", "res://plugin/mcp_screenshot_service.gd"],
-	["autoload/MCPInputService", "res://plugin/mcp_input_service.gd"],
-	["autoload/MCPGameInspector", "res://plugin/mcp_game_inspector_service.gd"],
+	["autoload/MCPScreenshot", "res://addons/godot_mcp/mcp_screenshot_service.gd"],
+	["autoload/MCPInputService", "res://addons/godot_mcp/mcp_input_service.gd"],
+	["autoload/MCPGameInspector", "res://addons/godot_mcp/mcp_game_inspector_service.gd"],
 ]
 
 const _MCP_TEMP_FILES: Array[String] = [
@@ -25,19 +27,19 @@ func _enter_tree() -> void:
 	_register_project_settings()
 
 	# Create command router
-	command_router = preload("res://plugin/command_router.gd").new()
+	command_router = preload("res://addons/godot_mcp/command_router.gd").new()
 	command_router.name = "MCPCommandRouter"
 	command_router.editor_plugin = self
 	add_child(command_router)
 
 	# Create WebSocket server
-	websocket_server = preload("res://plugin/websocket_server.gd").new()
+	websocket_server = preload("res://addons/godot_mcp/websocket_server.gd").new()
 	websocket_server.name = "MCPWebSocketServer"
 	websocket_server.command_router = command_router
 	add_child(websocket_server)
 
 	# Create status panel
-	var panel_scene: PackedScene = preload("res://plugin/ui/status_panel.tscn")
+	var panel_scene: PackedScene = preload("res://addons/godot_mcp/ui/status_panel.tscn")
 	status_panel = panel_scene.instantiate()
 	add_control_to_bottom_panel(status_panel, "MCP Pro")
 	status_panel.call_deferred("setup", websocket_server, command_router)
@@ -48,7 +50,7 @@ func _enter_tree() -> void:
 	websocket_server.start_server()
 	var cfg := ConfigFile.new()
 	var ver := "unknown"
-	if cfg.load("res://plugin/plugin.cfg") == OK:
+	if cfg.load("res://addons/godot_mcp/plugin.cfg") == OK:
 		ver = cfg.get_value("plugin", "version", "unknown")
 	print("[godot-mcp] v%s started (ports 6505-6514)" % ver)
 
@@ -166,40 +168,14 @@ func _process(delta: float) -> void:
 
 
 func _try_debugger_continue() -> void:
-	# Last resort: find and press the debugger Continue button to unstick the game
-	var base: Node = EditorInterface.get_base_control()
-	var continue_btn := _find_debugger_continue_button(base)
+	# Last resort: find and press the debugger Continue button to unstick the game.
+	# Reuses the locale-independent icon-based search from base_command.gd.
+	var continue_btn := _BaseCommand._find_debugger_continue_button()
 	if continue_btn and continue_btn.visible and not continue_btn.disabled:
 		continue_btn.emit_signal("pressed")
 		push_warning("[MCP] Auto-pressed debugger Continue button")
 	else:
 		push_warning("[MCP] Could not find debugger Continue button")
-
-
-func _find_debugger_continue_button(node: Node) -> Button:
-	# Search for the Continue button in ScriptEditorDebugger.
-	# The editor UI is translated, so matching tooltip/label text fails for
-	# non-English editors (issue #34: Italian → "Continua"). Match by the editor
-	# theme icon "DebugContinue" first, falling back to English text.
-	var continue_icon: Texture2D = null
-	var base: Control = EditorInterface.get_base_control()
-	if base != null and base.has_theme_icon("DebugContinue", "EditorIcons"):
-		continue_icon = base.get_theme_icon("DebugContinue", "EditorIcons")
-	return _find_continue_button_recursive(node, continue_icon)
-
-
-func _find_continue_button_recursive(node: Node, continue_icon: Texture2D) -> Button:
-	if node is Button:
-		var btn: Button = node
-		if continue_icon != null and btn.icon == continue_icon:
-			return btn
-		if btn.tooltip_text.contains("Continue") or btn.text == "Continue":
-			return btn
-	for child in node.get_children():
-		var found: Button = _find_continue_button_recursive(child, continue_icon)
-		if found:
-			return found
-	return null
 
 
 func _auto_dismiss_dialogs() -> void:

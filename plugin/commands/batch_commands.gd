@@ -1,8 +1,8 @@
 @tool
-extends "res://plugin/commands/base_command.gd"
+extends "res://addons/godot_mcp/commands/base_command.gd"
 
 
-const PropertyParser := preload("res://plugin/utils/property_parser.gd")
+const PropertyParser := preload("res://addons/godot_mcp/utils/property_parser.gd")
 
 
 func get_commands() -> Dictionary:
